@@ -23,8 +23,10 @@
 #ifndef __CFG_CONVERGED_H
 #define __CFG_CONVERGED_H
 
+#include <wlan_scan_cfg.h>
+
 #define CFG_CONVERGED_ALL \
-	/* i.e. CFG_SCAN_ALL etc. */
+		CFG_SCAN_ALL
 
 #endif /* __CFG_CONVERGED_H */
 
