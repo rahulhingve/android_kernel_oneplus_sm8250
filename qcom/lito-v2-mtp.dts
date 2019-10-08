@@ -5,7 +5,7 @@
 #include "lito-v2-audio.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. Lito MTP";
+	model = "Qualcomm Technologies, Inc. Lito v2 MTP";
 	compatible = "qcom,lito-mtp", "qcom,lito", "qcom,mtp";
 	qcom,board-id = <8 0>;
 };
