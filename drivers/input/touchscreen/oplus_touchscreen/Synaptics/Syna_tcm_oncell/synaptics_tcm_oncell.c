@@ -2152,7 +2152,7 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
     obj_attention = 0;
     for (idx = 0; idx < touch_hcd->max_objects; idx++) {
         status = object_data[idx].status;
-        if (status != LIFT) {
+        if (status != LIFT && (object_data[idx].y_pos & 0x0FFF) <= 2400) {
             obj_attention |= (0x1 << idx);
             points[idx].status = 1;
         } else {
@@ -2203,7 +2203,7 @@ static int syna_get_touch_points_auto(void *chip_data,
 	obj_attention = 0;
 	for (idx = 0; idx < touch_hcd->max_objects; idx++) {
 		status = object_data[idx].status;
-		if (status != LIFT) {
+		if (status != LIFT && (object_data[idx].y_pos & 0x0FFF) <= 2400) {
 			obj_attention |= (0x1 << idx);
 			points[idx].status = 1;
 		} else {
