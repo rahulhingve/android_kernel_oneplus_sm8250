@@ -291,19 +291,18 @@ static void tp_touch_down(struct touchpanel_data *ts, struct point_info points, 
             }
             input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, last_width_major);
         }
-        if ((points.x > ts->touch_major_limit.width_range) && (points.x < ts->resolution_info.max_x - ts->touch_major_limit.width_range) && \
-            (points.y > ts->touch_major_limit.height_range) && (points.y < ts->resolution_info.max_y - ts->touch_major_limit.height_range)) {
-            if (ts->smart_gesture_support) {
-                if (points.touch_major > SMART_GESTURE_THRESHOLD) {
-                    input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, points.touch_major);
-                } else {
-                    input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, SMART_GESTURE_LOW_VALUE);
-                }
+        if (ts->smart_gesture_support) {
+            if (points.touch_major > SMART_GESTURE_THRESHOLD) {
+                input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, points.touch_major);
+            } else {
+                input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, SMART_GESTURE_LOW_VALUE);
             }
+        } else {
+            input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, max((int)points.touch_major, 10));
+        }
 
-            if (ts->pressure_report_support) {
-                input_report_abs(ts->input_dev, ABS_MT_PRESSURE, points.touch_major);   //add for fixing gripview tap no function issue
-            }
+        if (ts->pressure_report_support) {
+            input_report_abs(ts->input_dev, ABS_MT_PRESSURE, max((int)points.touch_major, 10));
         }
         if(!CHK_BIT(ts->irq_slot, (1 << id))) {
             TPD_DETAIL("first touch point id %d [%4d %4d %4d %4d %4d %4d %4d]\n", id, points.x, points.y, points.z,
@@ -606,96 +605,11 @@ static void tp_touch_release(struct touchpanel_data *ts)
 
 static bool edge_point_process(struct touchpanel_data *ts, struct point_info points)
 {
-    if (ts->limit_edge) {
-        if (points.x > ts->edge_limit.left_x2 && points.x < ts->edge_limit.right_x2) {
-            if (ts->edge_limit.in_which_area == AREA_EDGE)
-                tp_touch_release(ts);
-            ts->edge_limit.in_which_area = AREA_NORMAL;
-        } else if ((points.x > ts->edge_limit.left_x1 && points.x < ts->edge_limit.left_x2) || (points.x > ts->edge_limit.right_x2 && points.x < ts->edge_limit.right_x1)) { //area2
-            if (ts->edge_limit.in_which_area == AREA_EDGE) {
-                ts->edge_limit.in_which_area = AREA_CRITICAL;
-            }
-        } else if (points.x < ts->edge_limit.left_x1 || points.x > ts->edge_limit.right_x1) {        //area 1
-            if (ts->edge_limit.in_which_area == AREA_CRITICAL) {
-                ts->edge_limit.in_which_area = AREA_EDGE;
-                return true;
-            }
-            if (ts->edge_limit.in_which_area ==  AREA_NORMAL)
-                return true;
-
-            ts->edge_limit.in_which_area = AREA_EDGE;
-        }
-    }
-
     return false;
 }
 
 static bool corner_point_process(struct touchpanel_data *ts, struct corner_info *corner, struct point_info *points, int i)
 {
-    int j;
-    if (ts->limit_corner) {
-        if ((ts->limit_corner & (1 << CORNER_TOPLEFT)) && (points[i].x < ts->edge_limit.left_x3 && points[i].y < ts->edge_limit.left_y1)) {
-            points[i].type  = AREA_CORNER;
-            if (ts->edge_limit.in_which_area == AREA_NORMAL)
-                return true;
-
-            corner[CORNER_TOPLEFT].id = i;
-            corner[CORNER_TOPLEFT].point = points[i];
-            corner[CORNER_TOPLEFT].flag = true;
-
-            ts->edge_limit.in_which_area = points[i].type;
-        }
-        if ((ts->limit_corner & (1 << CORNER_TOPRIGHT))  && (points[i].x < ts->edge_limit.left_x3 && points[i].y > ts->edge_limit.right_y1)) {
-            points[i].type  = AREA_CORNER;
-            if (ts->edge_limit.in_which_area == AREA_NORMAL)
-                return true;
-
-            corner[CORNER_TOPRIGHT].id = i;
-            corner[CORNER_TOPRIGHT].point = points[i];
-            corner[CORNER_TOPRIGHT].flag = true;
-
-            ts->edge_limit.in_which_area = points[i].type;
-        }
-        if ((ts->limit_corner & (1 << CORNER_BOTTOMLEFT))  && (points[i].x > ts->edge_limit.right_x3 && points[i].y < ts->edge_limit.left_y1)) {
-            points[i].type  = AREA_CORNER;
-            if (ts->edge_limit.in_which_area == AREA_NORMAL)
-                return true;
-
-            corner[CORNER_BOTTOMLEFT].id = i;
-            corner[CORNER_BOTTOMLEFT].point = points[i];
-            corner[CORNER_BOTTOMLEFT].flag = true;
-
-            ts->edge_limit.in_which_area = points[i].type;
-        }
-        if ((ts->limit_corner & (1 << CORNER_BOTTOMRIGHT))  && (points[i].x > ts->edge_limit.right_x3 && points[i].y > ts->edge_limit.right_y1)) {
-            points[i].type  = AREA_CORNER;
-            if (ts->edge_limit.in_which_area == AREA_NORMAL)
-                return true;
-
-            corner[CORNER_BOTTOMRIGHT].id = i;
-            corner[CORNER_BOTTOMRIGHT].point = points[i];
-            corner[CORNER_BOTTOMRIGHT].flag = true;
-
-            ts->edge_limit.in_which_area = points[i].type;
-        }
-
-        if (points[i].type != AREA_CORNER) {
-            if (ts->edge_limit.in_which_area == AREA_CORNER) {
-                for (j = 0; j < 4; j++) {
-                    if (corner[j].flag) {
-#ifdef TYPE_B_PROTOCOL
-                        input_mt_slot(ts->input_dev, corner[j].id);
-                        input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
-#endif
-                    }
-                }
-            }
-            points[i].type = AREA_NORMAL;
-            ts->edge_limit.in_which_area = points[i].type;
-        }
-
-    }
-
     return false;
 }
 

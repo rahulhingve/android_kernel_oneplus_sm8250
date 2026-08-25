@@ -169,10 +169,13 @@ static int syna_parse_report(struct syna_tcm_data *tcm_info)
         case TOUCH_END:
             goto exit;
         case TOUCH_FOREACH_ACTIVE_OBJECT:
+            if (tcm_info->in_suspend && *tcm_info->in_suspend) {
+                goto exit;
+            }
             obj = 0;
             next = idx;
             active_only = true;
-            if (offset + 96 > report_size * 8) {
+            if (offset + 56 > report_size * 8) {
                 while (idx < config_size && config_data[idx] != TOUCH_FOREACH_END)
                     idx++;
                 if (idx < config_size)
@@ -191,7 +194,7 @@ static int syna_parse_report(struct syna_tcm_data *tcm_info)
                     objects++;
                     if (objects < active_objects)
                         idx = next;
-                } else if (offset + 96 <= report_size * 8) {
+                } else if (offset + 56 <= report_size * 8) {
                     idx = next;
                 }
             } else {
@@ -279,9 +282,6 @@ static int syna_parse_report(struct syna_tcm_data *tcm_info)
                 return retval;
             }
             object_data[obj].x_width = data;
-            if (data > 200) {
-                object_data[obj].status = LIFT;
-            }
             offset += bits;
             break;
         case TOUCH_OBJECT_N_Y_WIDTH:
@@ -592,17 +592,13 @@ static int syna_set_normal_report_config(struct syna_tcm_data *tcm_info)
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_CLASSIFICATION;
     touch_hcd->out.buf[idx++] = 4;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_X_POSITION;
-    touch_hcd->out.buf[idx++] = 16;
+    touch_hcd->out.buf[idx++] = 12;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_Y_POSITION;
-    touch_hcd->out.buf[idx++] = 16;
+    touch_hcd->out.buf[idx++] = 12;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_X_WIDTH;
     touch_hcd->out.buf[idx++] = 12;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_Y_WIDTH;
     touch_hcd->out.buf[idx++] = 12;
-    touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_Z;
-    touch_hcd->out.buf[idx++] = 16;
-    touch_hcd->out.buf[idx++] = TOUCH_REPORT_CUSTOMER_GRIP_INFO;
-    touch_hcd->out.buf[idx++] = 16;
     touch_hcd->out.buf[idx++] = TOUCH_FOREACH_END;
     touch_hcd->out.buf[idx++] = TOUCH_END;
 
@@ -668,17 +664,13 @@ static int syna_set_gesture_report_config(struct syna_tcm_data *tcm_info)
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_CLASSIFICATION;
     touch_hcd->out.buf[idx++] = 4;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_X_POSITION;
-    touch_hcd->out.buf[idx++] = 16;
+    touch_hcd->out.buf[idx++] = 12;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_Y_POSITION;
-    touch_hcd->out.buf[idx++] = 16;
+    touch_hcd->out.buf[idx++] = 12;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_X_WIDTH;
     touch_hcd->out.buf[idx++] = 12;
     touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_Y_WIDTH;
     touch_hcd->out.buf[idx++] = 12;
-    touch_hcd->out.buf[idx++] = TOUCH_OBJECT_N_Z;
-    touch_hcd->out.buf[idx++] = 16;
-    touch_hcd->out.buf[idx++] = TOUCH_REPORT_CUSTOMER_GRIP_INFO;
-    touch_hcd->out.buf[idx++] = 16;
     touch_hcd->out.buf[idx++] = TOUCH_FOREACH_END;
     touch_hcd->out.buf[idx++] = TOUCH_END;
 
@@ -2160,17 +2152,17 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
     obj_attention = 0;
     for (idx = 0; idx < touch_hcd->max_objects; idx++) {
         status = object_data[idx].status;
-        if (status != LIFT && object_data[idx].x_width <= 200 && object_data[idx].x_pos != 0x03a5) {
+        if (status != LIFT && (object_data[idx].x_pos & 0x0FFF) != 0x03a5) {
             obj_attention |= (0x1 << idx);
             points[idx].status = 1;
         } else {
             points[idx].status = 0;
         }
 
-        points[idx].x = object_data[idx].x_pos;
-        points[idx].y = object_data[idx].y_pos;
-        points[idx].touch_major = max(object_data[idx].x_width, object_data[idx].y_width);
-        points[idx].width_major = min(object_data[idx].x_width, object_data[idx].y_width);
+        points[idx].x = object_data[idx].x_pos & 0x0FFF;
+        points[idx].y = object_data[idx].y_pos & 0x0FFF;
+        points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 10);
+        points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 10);
         points[idx].tx_press = object_data[idx].exWidth;
         points[idx].rx_press = object_data[idx].eyWidth;
         points[idx].tx_er = object_data[idx].xERatio;
@@ -2211,7 +2203,7 @@ static int syna_get_touch_points_auto(void *chip_data,
 	obj_attention = 0;
 	for (idx = 0; idx < touch_hcd->max_objects; idx++) {
 		status = object_data[idx].status;
-		if (status != LIFT && object_data[idx].x_width <= 200 && object_data[idx].x_pos != 0x03a5) {
+		if (status != LIFT && (object_data[idx].x_pos & 0x0FFF) != 0x03a5) {
 			obj_attention |= (0x1 << idx);
 			points[idx].status = 1;
 		} else {
@@ -2219,17 +2211,17 @@ static int syna_get_touch_points_auto(void *chip_data,
 		}
 
 		if (max_x_inchip == max_x) {
-			points[idx].x = object_data[idx].x_pos;
+			points[idx].x = object_data[idx].x_pos & 0x0FFF;
 		} else {
-			points[idx].x = (object_data[idx].x_pos * max_x) / max_x_inchip;
+			points[idx].x = ((object_data[idx].x_pos & 0x0FFF) * max_x) / max_x_inchip;
 		}
 		if (max_y_inchip == max_y) {
-			points[idx].y = object_data[idx].y_pos;
+			points[idx].y = object_data[idx].y_pos & 0x0FFF;
 		} else {
-			points[idx].y = (object_data[idx].y_pos * max_y) / max_y_inchip;
+			points[idx].y = ((object_data[idx].y_pos & 0x0FFF) * max_y) / max_y_inchip;
 		}
-		points[idx].touch_major = max(object_data[idx].x_width, object_data[idx].y_width);
-		points[idx].width_major = min(object_data[idx].x_width, object_data[idx].y_width);
+		points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 10);
+		points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 10);
 		points[idx].tx_press = object_data[idx].exWidth;
 		points[idx].rx_press = object_data[idx].eyWidth;
 		points[idx].tx_er = object_data[idx].xERatio;
@@ -2546,22 +2538,10 @@ static int syna_corner_limit_handle(struct syna_tcm_data *tcm_info)
 
 static int syna_enable_edge_limit(struct syna_tcm_data *tcm_info)
 {
-    int ret = 0;
-    TPD_INFO("%s: enter\n", __func__);
-
-    ret = syna_tcm_set_dynamic_config(tcm_info, DC_GRIP_ENABLED, 0x01);
-    if (ret < 0) {
-        TPD_INFO("%s:failed to enable grip suppression\n", __func__);
-        return ret;
-    }
-
-    ret = syna_corner_limit_handle(tcm_info);
-    if (ret < 0) {
-        TPD_INFO("%s:failed to set grip suppression para\n", __func__);
-        return ret;
-    }
-
-    return ret;
+    TPD_INFO("%s: disabling hardware grip dark zones for replacement panel\n", __func__);
+    syna_tcm_set_dynamic_config(tcm_info, DC_GRIP_ENABLED, 0x00);
+    syna_tcm_set_dynamic_config(tcm_info, DC_DARK_ZONE_ENABLE, 0x00);
+    return 0;
 }
 
 static int syna_mode_switch(void *chip_data, work_mode mode, bool flag)
@@ -3307,10 +3287,8 @@ static int syna_get_gesture_info(void *chip_data, struct gesture_info *gesture)
     gesture->clockwise = 2;
     switch (touch_data->lpwg_gesture) {
     case DTAP_DETECT:
-        gesture->gesture_type = DouTap;
-        break;
     case STAP_DETECT:
-        gesture->gesture_type = SingleTap;
+        gesture->gesture_type = DouTap;
         break;
     case CIRCLE_DETECT:
         gesture->gesture_type = Circle;
@@ -3379,10 +3357,10 @@ static int syna_get_gesture_info(void *chip_data, struct gesture_info *gesture)
         break;
     }
     if (gesture->gesture_type != UnkownGesture) {
-        gesture->Point_start.x = (touch_data->data_point[0] | (touch_data->data_point[1] << 8));
-        gesture->Point_start.y = (touch_data->data_point[2] | (touch_data->data_point[3] << 8));
-        gesture->Point_end.x    = (touch_data->data_point[4] | (touch_data->data_point[5] << 8));
-        gesture->Point_end.y    = (touch_data->data_point[6] | (touch_data->data_point[7] << 8));
+        gesture->Point_start.x = (touch_data->extra_gesture_info[0] | (touch_data->extra_gesture_info[1] << 8));
+        gesture->Point_start.y = (touch_data->extra_gesture_info[2] | (touch_data->extra_gesture_info[3] << 8));
+        gesture->Point_end.x    = (touch_data->extra_gesture_info[4] | (touch_data->extra_gesture_info[5] << 8));
+        gesture->Point_end.y    = gesture->Point_start.y;
         gesture->Point_1st.x    = (touch_data->data_point[8] | (touch_data->data_point[9] << 8));
         gesture->Point_1st.y    = (touch_data->data_point[10] | (touch_data->data_point[11] << 8));
         gesture->Point_2nd.x    = (touch_data->data_point[12] | (touch_data->data_point[13] << 8));
