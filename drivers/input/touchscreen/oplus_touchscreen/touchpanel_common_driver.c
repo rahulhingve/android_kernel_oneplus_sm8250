@@ -298,11 +298,11 @@ static void tp_touch_down(struct touchpanel_data *ts, struct point_info points, 
                 input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, SMART_GESTURE_LOW_VALUE);
             }
         } else {
-            input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, max((int)points.touch_major, 10));
+            input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, max((int)points.touch_major, 30));
         }
 
         if (ts->pressure_report_support) {
-            input_report_abs(ts->input_dev, ABS_MT_PRESSURE, max((int)points.touch_major, 10));
+            input_report_abs(ts->input_dev, ABS_MT_PRESSURE, max((int)points.touch_major, 60));
         }
         if(!CHK_BIT(ts->irq_slot, (1 << id))) {
             TPD_DETAIL("first touch point id %d [%4d %4d %4d %4d %4d %4d %4d]\n", id, points.x, points.y, points.z,

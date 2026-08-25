@@ -2161,8 +2161,8 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
 
         points[idx].x = object_data[idx].x_pos & 0x0FFF;
         points[idx].y = object_data[idx].y_pos & 0x0FFF;
-        points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 10);
-        points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 10);
+        points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 30);
+        points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 20);
         points[idx].tx_press = object_data[idx].exWidth;
         points[idx].rx_press = object_data[idx].eyWidth;
         points[idx].tx_er = object_data[idx].xERatio;
@@ -2220,8 +2220,8 @@ static int syna_get_touch_points_auto(void *chip_data,
 		} else {
 			points[idx].y = ((object_data[idx].y_pos & 0x0FFF) * max_y) / max_y_inchip;
 		}
-		points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 10);
-		points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 10);
+		points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 30);
+		points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 20);
 		points[idx].tx_press = object_data[idx].exWidth;
 		points[idx].rx_press = object_data[idx].eyWidth;
 		points[idx].tx_er = object_data[idx].xERatio;
@@ -2284,11 +2284,13 @@ static int syna_tcm_set_gesture_mode(struct syna_tcm_data *tcm_info, bool enable
             TPD_INFO("%s: Failed to set dynamic gesture config\n", __func__);
             return retval;
         }
-		retval = syna_tcm_set_dynamic_config(tcm_info, DC_GESTURE_MASK, config);
+        retval = syna_tcm_set_dynamic_config(tcm_info, DC_GESTURE_MASK, 0xFFFF);
         if (retval < 0) {
             TPD_INFO("%s: Failed to set dynamic gesture mask config\n", __func__);
             return retval;
         }
+        syna_tcm_set_dynamic_config(tcm_info, DC_ENABLE_GLOVE, 0x01);
+        syna_tcm_set_dynamic_config(tcm_info, DC_NO_DOZE, 0x01);
     } else {
         retval = syna_tcm_sleep(tcm_info, true);
         if (retval < 0) {
@@ -2392,6 +2394,11 @@ static int syna_tcm_normal_mode(struct syna_tcm_data *tcm_info)
         TPD_INFO("Failed to set dynamic gesture config\n");
         return retval;
     }
+
+    syna_tcm_set_dynamic_config(tcm_info, DC_GRIP_ENABLED, 0x00);
+    syna_tcm_set_dynamic_config(tcm_info, DC_DARK_ZONE_ENABLE, 0x00);
+    syna_tcm_set_dynamic_config(tcm_info, DC_NO_DOZE, 0x01);
+    syna_tcm_set_dynamic_config(tcm_info, DC_ENABLE_GLOVE, 0x01);
 
     syna_report_refresh_switch(tcm_info, tcm_info->display_refresh_rate);
 
