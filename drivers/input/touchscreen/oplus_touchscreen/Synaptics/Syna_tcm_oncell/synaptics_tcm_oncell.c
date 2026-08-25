@@ -2809,23 +2809,31 @@ static void syna_tcm_fingerprint_info(void *chip_data, struct fp_underscreen_inf
     struct touch_hcd *touch_hcd = tcm_info->touch_hcd;
     struct touch_data *touch_data = &touch_hcd->touch_data;
     u8 *fp_buf = tcm_info->report.buffer.buf;
+    int offset = 0;
 
     if (!fp_tpinfo) {
         return;
     }
 
-    if (tcm_info->report.buffer.data_length < 8 && touch_data->lpwg_gesture == TOUCH_HOLD_DOWN) {
+    if (tcm_info->report.buffer.data_length < 7 && touch_data->lpwg_gesture == TOUCH_HOLD_DOWN) {
         TPD_INFO("%s: invalid fingerprint buf length\n", __func__);
         return;
     }
 
+    if (fp_buf[0] == TOUCH_HOLD_DOWN || fp_buf[0] == TOUCH_HOLD_UP) {
+        offset = 1;
+    }
+
     if (touch_data->lpwg_gesture == TOUCH_HOLD_DOWN) {
         fp_tpinfo->touch_state = FINGERPRINT_DOWN_DETECT;
-        fp_tpinfo->x = fp_buf[0] | fp_buf[1] << 8;
-        fp_tpinfo->y = fp_buf[2] | fp_buf[3] << 8;
-        fp_tpinfo->area_rate = fp_buf[4] | fp_buf[5] << 8;
+        fp_tpinfo->x = fp_buf[offset + 0] | (fp_buf[offset + 1] << 8);
+        fp_tpinfo->y = fp_buf[offset + 2] | (fp_buf[offset + 3] << 8);
+        fp_tpinfo->area_rate = fp_buf[offset + 4] | (fp_buf[offset + 5] << 8);
     } else if (touch_data->lpwg_gesture == TOUCH_HOLD_UP) {
         fp_tpinfo->touch_state = FINGERPRINT_UP_DETECT;
+        fp_tpinfo->x = fp_buf[offset + 0] | (fp_buf[offset + 1] << 8);
+        fp_tpinfo->y = fp_buf[offset + 2] | (fp_buf[offset + 3] << 8);
+        fp_tpinfo->area_rate = fp_buf[offset + 4] | (fp_buf[offset + 5] << 8);
     }
 
     return;
@@ -2839,6 +2847,7 @@ static void syna_tcm_fingerprint_info_auto(void *chip_data,
 	struct touch_hcd *touch_hcd = tcm_info->touch_hcd;
 	struct touch_data *touch_data = &touch_hcd->touch_data;
 	u8 *fp_buf = tcm_info->report.buffer.buf;
+	int offset = 0;
 
 	int max_x_inchip = 0;
 	int max_y_inchip = 0;
@@ -2849,7 +2858,7 @@ static void syna_tcm_fingerprint_info_auto(void *chip_data,
 		return;
 	}
 
-	if (tcm_info->report.buffer.data_length < 8
+	if (tcm_info->report.buffer.data_length < 7
 	    && touch_data->lpwg_gesture == TOUCH_HOLD_DOWN) {
 		TPD_INFO("%s: invalid fingerprint buf length\n", __func__);
 		return;
@@ -2860,6 +2869,10 @@ static void syna_tcm_fingerprint_info_auto(void *chip_data,
 		return;
 	}
 
+	if (fp_buf[0] == TOUCH_HOLD_DOWN || fp_buf[0] == TOUCH_HOLD_UP) {
+		offset = 1;
+	}
+
 	max_x_inchip = le2_to_uint(tcm_info->app_info.max_x) + 1;
 	max_y_inchip = le2_to_uint(tcm_info->app_info.max_y) + 1;
 	max_x = resolution_info->LCD_WIDTH;
@@ -2867,21 +2880,21 @@ static void syna_tcm_fingerprint_info_auto(void *chip_data,
 
 	if (touch_data->lpwg_gesture == TOUCH_HOLD_DOWN) {
 		fp_tpinfo->touch_state = FINGERPRINT_DOWN_DETECT;
-		fp_tpinfo->x = fp_buf[0] | fp_buf[1] << 8;
-		fp_tpinfo->y = fp_buf[2] | fp_buf[3] << 8;
-		fp_tpinfo->area_rate = fp_buf[4] | fp_buf[5] << 8;
+		fp_tpinfo->x = fp_buf[offset + 0] | (fp_buf[offset + 1] << 8);
+		fp_tpinfo->y = fp_buf[offset + 2] | (fp_buf[offset + 3] << 8);
+		fp_tpinfo->area_rate = fp_buf[offset + 4] | (fp_buf[offset + 5] << 8);
 	} else if (touch_data->lpwg_gesture == TOUCH_HOLD_UP) {
 		fp_tpinfo->touch_state = FINGERPRINT_UP_DETECT;
-		fp_tpinfo->x = fp_buf[0] | fp_buf[1] << 8;
-		fp_tpinfo->y = fp_buf[2] | fp_buf[3] << 8;
-		fp_tpinfo->area_rate = fp_buf[4] | fp_buf[5] << 8;
+		fp_tpinfo->x = fp_buf[offset + 0] | (fp_buf[offset + 1] << 8);
+		fp_tpinfo->y = fp_buf[offset + 2] | (fp_buf[offset + 3] << 8);
+		fp_tpinfo->area_rate = fp_buf[offset + 4] | (fp_buf[offset + 5] << 8);
 	}
 
-	if (max_x_inchip != max_x) {
+	if (max_x_inchip != max_x && max_x_inchip > 0) {
 		fp_tpinfo->x = (fp_tpinfo->x * max_x) / max_x_inchip;
 	}
 
-	if (max_y_inchip != max_y) {
+	if (max_y_inchip != max_y && max_y_inchip > 0) {
 		fp_tpinfo->y = (fp_tpinfo->y * max_y) / max_y_inchip;
 	}
 

@@ -1156,10 +1156,7 @@ static inline int request_firmware_select(const struct firmware **firmware_p, co
 {
 	return 1;
 }
-static inline int opticalfp_irq_handler(struct fp_underscreen_info *fp_tpinfo)
-{
-	return 0;
-}
+extern int opticalfp_irq_handler(struct fp_underscreen_info *fp_tpinfo);
 static inline int oplus_ofp_touchpanel_event_irq_call(struct fp_underscreen_info *fp_tpinfo)
 {
 	return 0;
