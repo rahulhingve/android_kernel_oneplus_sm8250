@@ -2152,7 +2152,7 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
     obj_attention = 0;
     for (idx = 0; idx < touch_hcd->max_objects; idx++) {
         status = object_data[idx].status;
-        if (status != LIFT && !(object_data[idx].x_pos == 0x03a5 && object_data[idx].y_pos > 2400)) {
+        if (status != LIFT && (object_data[idx].x_width & 0x0FFF) <= 200 && !(object_data[idx].x_pos == 0x03a5 && object_data[idx].y_pos > 2400)) {
             obj_attention |= (0x1 << idx);
             points[idx].status = 1;
         } else {
@@ -2161,8 +2161,8 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
 
         points[idx].x = object_data[idx].x_pos & 0x0FFF;
         points[idx].y = object_data[idx].y_pos & 0x0FFF;
-        points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 30);
-        points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 20);
+        points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
+        points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
         points[idx].tx_press = object_data[idx].exWidth;
         points[idx].rx_press = object_data[idx].eyWidth;
         points[idx].tx_er = object_data[idx].xERatio;
@@ -2203,7 +2203,7 @@ static int syna_get_touch_points_auto(void *chip_data,
 	obj_attention = 0;
 	for (idx = 0; idx < touch_hcd->max_objects; idx++) {
 		status = object_data[idx].status;
-		if (status != LIFT && !(object_data[idx].x_pos == 0x03a5 && object_data[idx].y_pos > 2400)) {
+		if (status != LIFT && (object_data[idx].x_width & 0x0FFF) <= 200 && !(object_data[idx].x_pos == 0x03a5 && object_data[idx].y_pos > 2400)) {
 			obj_attention |= (0x1 << idx);
 			points[idx].status = 1;
 		} else {
@@ -2220,8 +2220,8 @@ static int syna_get_touch_points_auto(void *chip_data,
 		} else {
 			points[idx].y = ((object_data[idx].y_pos & 0x0FFF) * max_y) / max_y_inchip;
 		}
-		points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), 30);
-		points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), 20);
+		points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
+		points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
 		points[idx].tx_press = object_data[idx].exWidth;
 		points[idx].rx_press = object_data[idx].eyWidth;
 		points[idx].tx_er = object_data[idx].xERatio;
