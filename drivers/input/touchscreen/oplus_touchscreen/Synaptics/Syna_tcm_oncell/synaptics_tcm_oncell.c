@@ -2160,16 +2160,20 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
 
         if (status != LIFT) {
             if (raw_x >= 1080 || raw_y >= 2400 || raw_xw > 200 || raw_yw > 200) {
-                TPD_INFO("[TP_DROP] idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
-                         idx, status, raw_x, raw_y, raw_xw, raw_yw);
+                TPD_INFO("[TP_DROP] idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u xER=%u yER=%u\n",
+                         idx, status, raw_x, raw_y, raw_xw, raw_yw,
+                         object_data[idx].exWidth, object_data[idx].eyWidth,
+                         object_data[idx].xERatio, object_data[idx].yERatio);
                 points[idx].status = 0;
                 continue;
             }
 
             obj_attention |= (0x1 << idx);
             points[idx].status = 1;
-            TPD_INFO("[TP_RAW] idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
-                     idx, status, raw_x, raw_y, raw_xw, raw_yw);
+            TPD_INFO("[TP_RAW] idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u xER=%u yER=%u\n",
+                     idx, status, raw_x, raw_y, raw_xw, raw_yw,
+                     object_data[idx].exWidth, object_data[idx].eyWidth,
+                     object_data[idx].xERatio, object_data[idx].yERatio);
         } else {
             points[idx].status = 0;
         }
@@ -2226,16 +2230,18 @@ static int syna_get_touch_points_auto(void *chip_data,
 
 		if (status != LIFT) {
 			if (raw_x >= max_x || raw_y >= max_y || raw_xw > 200 || raw_yw > 200) {
-				TPD_INFO("[TP_DROP] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
-					 idx, status, raw_x, raw_y, raw_xw, raw_yw);
+				TPD_INFO("[TP_DROP] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u\n",
+					 idx, status, raw_x, raw_y, raw_xw, raw_yw,
+					 object_data[idx].exWidth, object_data[idx].eyWidth);
 				points[idx].status = 0;
 				continue;
 			}
 
 			obj_attention |= (0x1 << idx);
 			points[idx].status = 1;
-			TPD_INFO("[TP_RAW] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
-				 idx, status, raw_x, raw_y, raw_xw, raw_yw);
+			TPD_INFO("[TP_RAW] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u\n",
+				 idx, status, raw_x, raw_y, raw_xw, raw_yw,
+				 object_data[idx].exWidth, object_data[idx].eyWidth);
 		} else {
 			points[idx].status = 0;
 		}
