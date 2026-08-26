@@ -163,6 +163,13 @@ static int syna_parse_report(struct syna_tcm_data *tcm_info)
 
     TPD_INFO("[TCM] parse_report len=%d config_len=%d payload: %*ph\n", (int)report_size, (int)config_size, (int)report_size, tcm_info->report.buffer.buf);
 
+    if (report_size >= 10 && (tcm_info->report.buffer.buf[7] & 0x0F) == 0x00 &&
+        tcm_info->report.buffer.buf[8] == 0xa5 && tcm_info->report.buffer.buf[9] == 0x03) {
+        TPD_INFO("[TCM] Stripping 0x03a5 prefix to align touch payload\n");
+        memmove(&tcm_info->report.buffer.buf[8], &tcm_info->report.buffer.buf[10], report_size - 10);
+        memset(&tcm_info->report.buffer.buf[report_size - 2], 0, 2);
+    }
+
     while (idx < config_size) {
         code = config_data[idx++];
         switch (code) {
