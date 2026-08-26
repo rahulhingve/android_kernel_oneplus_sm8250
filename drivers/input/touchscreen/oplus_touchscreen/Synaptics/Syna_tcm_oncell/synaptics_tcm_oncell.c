@@ -2133,6 +2133,7 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
     struct syna_tcm_data *tcm_info = (struct syna_tcm_data *)chip_data;
 	struct touch_hcd *touch_hcd = NULL;
     static unsigned int obj_attention = 0x00;
+    int raw_x, raw_y, raw_xw, raw_yw;
 
     if (points == NULL || tcm_info == NULL)
         return obj_attention;
@@ -2152,21 +2153,31 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
     obj_attention = 0;
     for (idx = 0; idx < touch_hcd->max_objects; idx++) {
         status = object_data[idx].status;
+        raw_x = object_data[idx].x_pos & 0x0FFF;
+        raw_y = object_data[idx].y_pos & 0x0FFF;
+        raw_xw = object_data[idx].x_width & 0x0FFF;
+        raw_yw = object_data[idx].y_width & 0x0FFF;
+
         if (status != LIFT) {
+            if (raw_x >= 1080 || raw_y >= 2400 || raw_xw > 200 || raw_yw > 200) {
+                TPD_INFO("[TP_DROP] idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
+                         idx, status, raw_x, raw_y, raw_xw, raw_yw);
+                points[idx].status = 0;
+                continue;
+            }
+
             obj_attention |= (0x1 << idx);
             points[idx].status = 1;
-            TPD_INFO("[TP_RAW] idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u\n",
-                     idx, status, object_data[idx].x_pos & 0x0FFF, object_data[idx].y_pos & 0x0FFF,
-                     object_data[idx].x_width & 0x0FFF, object_data[idx].y_width & 0x0FFF,
-                     object_data[idx].exWidth, object_data[idx].eyWidth);
+            TPD_INFO("[TP_RAW] idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
+                     idx, status, raw_x, raw_y, raw_xw, raw_yw);
         } else {
             points[idx].status = 0;
         }
 
-        points[idx].x = object_data[idx].x_pos & 0x0FFF;
-        points[idx].y = object_data[idx].y_pos & 0x0FFF;
-        points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
-        points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
+        points[idx].x = raw_x;
+        points[idx].y = raw_y;
+        points[idx].touch_major = max(raw_xw, raw_yw);
+        points[idx].width_major = min(raw_xw, raw_yw);
         points[idx].tx_press = object_data[idx].exWidth;
         points[idx].rx_press = object_data[idx].eyWidth;
         points[idx].tx_er = object_data[idx].xERatio;
@@ -2190,6 +2201,7 @@ static int syna_get_touch_points_auto(void *chip_data,
 	int max_y_inchip = 0;
 	int max_x = 0;
 	int max_y = 0;
+	int raw_x, raw_y, raw_xw, raw_yw;
 
 	if (points == NULL) {
 		return obj_attention;
@@ -2207,29 +2219,39 @@ static int syna_get_touch_points_auto(void *chip_data,
 	obj_attention = 0;
 	for (idx = 0; idx < touch_hcd->max_objects; idx++) {
 		status = object_data[idx].status;
+		raw_x = object_data[idx].x_pos & 0x0FFF;
+		raw_y = object_data[idx].y_pos & 0x0FFF;
+		raw_xw = object_data[idx].x_width & 0x0FFF;
+		raw_yw = object_data[idx].y_width & 0x0FFF;
+
 		if (status != LIFT) {
+			if (raw_x >= max_x || raw_y >= max_y || raw_xw > 200 || raw_yw > 200) {
+				TPD_INFO("[TP_DROP] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
+					 idx, status, raw_x, raw_y, raw_xw, raw_yw);
+				points[idx].status = 0;
+				continue;
+			}
+
 			obj_attention |= (0x1 << idx);
 			points[idx].status = 1;
-			TPD_INFO("[TP_RAW] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u\n",
-				 idx, status, object_data[idx].x_pos & 0x0FFF, object_data[idx].y_pos & 0x0FFF,
-				 object_data[idx].x_width & 0x0FFF, object_data[idx].y_width & 0x0FFF,
-				 object_data[idx].exWidth, object_data[idx].eyWidth);
+			TPD_INFO("[TP_RAW] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u\n",
+				 idx, status, raw_x, raw_y, raw_xw, raw_yw);
 		} else {
 			points[idx].status = 0;
 		}
 
 		if (max_x_inchip == max_x) {
-			points[idx].x = object_data[idx].x_pos & 0x0FFF;
+			points[idx].x = raw_x;
 		} else {
-			points[idx].x = ((object_data[idx].x_pos & 0x0FFF) * max_x) / max_x_inchip;
+			points[idx].x = (raw_x * max_x) / max_x_inchip;
 		}
 		if (max_y_inchip == max_y) {
-			points[idx].y = object_data[idx].y_pos & 0x0FFF;
+			points[idx].y = raw_y;
 		} else {
-			points[idx].y = ((object_data[idx].y_pos & 0x0FFF) * max_y) / max_y_inchip;
+			points[idx].y = (raw_y * max_y) / max_y_inchip;
 		}
-		points[idx].touch_major = max((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
-		points[idx].width_major = min((int)(object_data[idx].x_width & 0x0FFF), (int)(object_data[idx].y_width & 0x0FFF));
+		points[idx].touch_major = max(raw_xw, raw_yw);
+		points[idx].width_major = min(raw_xw, raw_yw);
 		points[idx].tx_press = object_data[idx].exWidth;
 		points[idx].rx_press = object_data[idx].eyWidth;
 		points[idx].tx_er = object_data[idx].xERatio;
