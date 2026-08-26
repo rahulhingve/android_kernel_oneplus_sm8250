@@ -2152,9 +2152,13 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
     obj_attention = 0;
     for (idx = 0; idx < touch_hcd->max_objects; idx++) {
         status = object_data[idx].status;
-        if (status != LIFT && (object_data[idx].x_width & 0x0FFF) <= 200 && !(object_data[idx].x_pos == 0x03a5 && object_data[idx].y_pos > 2400)) {
+        if (status != LIFT) {
             obj_attention |= (0x1 << idx);
             points[idx].status = 1;
+            TPD_INFO("[TP_RAW] idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u\n",
+                     idx, status, object_data[idx].x_pos & 0x0FFF, object_data[idx].y_pos & 0x0FFF,
+                     object_data[idx].x_width & 0x0FFF, object_data[idx].y_width & 0x0FFF,
+                     object_data[idx].exWidth, object_data[idx].eyWidth);
         } else {
             points[idx].status = 0;
         }
@@ -2203,9 +2207,13 @@ static int syna_get_touch_points_auto(void *chip_data,
 	obj_attention = 0;
 	for (idx = 0; idx < touch_hcd->max_objects; idx++) {
 		status = object_data[idx].status;
-		if (status != LIFT && (object_data[idx].x_width & 0x0FFF) <= 200 && !(object_data[idx].x_pos == 0x03a5 && object_data[idx].y_pos > 2400)) {
+		if (status != LIFT) {
 			obj_attention |= (0x1 << idx);
 			points[idx].status = 1;
+			TPD_INFO("[TP_RAW] auto idx=%u status=%u x=%u y=%u xw=%u yw=%u exW=%u eyW=%u\n",
+				 idx, status, object_data[idx].x_pos & 0x0FFF, object_data[idx].y_pos & 0x0FFF,
+				 object_data[idx].x_width & 0x0FFF, object_data[idx].y_width & 0x0FFF,
+				 object_data[idx].exWidth, object_data[idx].eyWidth);
 		} else {
 			points[idx].status = 0;
 		}
