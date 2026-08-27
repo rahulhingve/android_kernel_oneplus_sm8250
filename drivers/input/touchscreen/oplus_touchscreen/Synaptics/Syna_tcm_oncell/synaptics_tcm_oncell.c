@@ -954,6 +954,13 @@ static void syna_tcm_dispatch_report(struct syna_tcm_data *tcm_info)
 	tcm_info->report.id = tcm_info->report_code;
 
 	if (tcm_info->report.id == REPORT_TOUCH) {
+		/* Strip 0x03a5 transient prefix if present */
+		if (tcm_info->report.buffer.data_length >= 2 &&
+		    tcm_info->report.buffer.buf[0] == 0x03 &&
+		    tcm_info->report.buffer.buf[1] == 0xa5) {
+			tcm_info->report.buffer.buf += 2;
+			tcm_info->report.buffer.data_length -= 2;
+		}
 		ret = syna_parse_report(tcm_info);
 		if (ret < 0) {
 			TPD_INFO("Failed to parse report\n");
