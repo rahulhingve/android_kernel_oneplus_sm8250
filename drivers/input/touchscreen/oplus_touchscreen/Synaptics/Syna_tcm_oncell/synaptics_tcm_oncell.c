@@ -493,7 +493,7 @@ exit:
     return 0;
 }
 
-static int syna_get_input_params(struct syna_tcm_data *tcm_info)
+static int __maybe_unused syna_get_input_params(struct syna_tcm_data *tcm_info)
 {
     int retval;
 
@@ -2145,7 +2145,7 @@ static int syna_get_touch_points(void *chip_data, struct point_info *points, int
     if (points == NULL || tcm_info == NULL)
         return obj_attention;
 
-	touch_hcd = tcm_info->touch_hcd;
+    touch_hcd = tcm_info->touch_hcd;
 
     if (!touch_hcd)
         return obj_attention;
@@ -2441,7 +2441,7 @@ static int syna_tcm_normal_mode(struct syna_tcm_data *tcm_info)
     return retval;
 }
 
-static int syna_corner_limit_handle(struct syna_tcm_data *tcm_info)
+static int __maybe_unused syna_corner_limit_handle(struct syna_tcm_data *tcm_info)
 {
     int ret = -1;
 
